@@ -1,0 +1,105 @@
+제목 (미정)
+
+ NAND 플래시 수명을 고려한 부분적 Defragment (가제)
+
+논문전개
+
+ - 스마트 디바이스는 널리 사용되고 있으며 Flash-based Storage 사용 중 
+
+ - Flash Memory의 성격: I/O 패턴에 따른 성능, 수명 등 
+
+ - Android Phone에서는 기본 파일 시스템이 EXT4
+
+ - 오래된 Phone을 조사하였을 때, File Fragmentation이 많이 발생. 
+
+ - 그러나 기존의 Defragmentation 도구는 많은 쓰기를 발생시켜 플래시 메모리 수명에 영향
+
+ - 우리 논문은 기존 Defragmentation 도구를 개선시키겠다.
+
+Idea
+
+ - 기존 기법은 파일의 모든 블록에 대해서 전부 Copy를 수행하였음
+
+ - 개선할 기법은 파일의 Fragment에서 최소한의 Fragment만 Copy를 수행 함.
+
+   (크기가 큰 Fragment는 Copy를 수행하지 않는다.)
+
+
+
+
+[To do 정리] 
+
+1. 논문 작성 및 Motivation 이해를 위한 자료
+
+ 1) Flash memory
+
+   - 기존 하드디스크와 비교하여 플래시 메모리 특성이 무엇인지
+
+   - 수명, 성능에 대해서
+
+
+ 2) EXT2 / EXT4
+
+   - 파일 시스템 Layout 
+
+   - 파일이 어떤 식으로 관리 되는 지? (파일을 읽을 때 어떻게 파일을 읽을 지 이해 했으면 됨.)
+
+   - EXT4의 EXTENT가 무엇인지? 
+
+ 3) Defragmentation
+
+
+ - Defragmetation의 이해 
+
+
+
+
+2. 코드 분석
+
+1) e4defrag
+
+
+ - https://fossies.org/dox/e2fsprogs-1.43.4/e4defrag_8c_source.html
+
+2) 어떻게 알고리즘을 구현 할 것인지 Flow Chart 그림
+
+3) 구현
+
+
+
+
+3. 논문 제출: 4/14 (금)
+
+ - Writing 도 해야 하니 4월 첫째주 까지는 끝나면 좋겠네요. 
+
+
+
+
+* 일의 진척도를 알아야 제가 Feedback을 줄 수 있을 거 같아서
+
+월요일에 방문해서 진행 사항 얘기하시면 될 것 같습니다.
+
+* 구현할 때 연구실 방문하셔서 구현하시면 옆에서 도와줄 수 있을 거 같아요. 
+
+* 궁금한 내용 있으면 카톡으로 질문 주세요. 
+
+
+
+강윤지 드림. 
+
+
+
+
+
+
+
+
+-------------------------------------------------
+
+Embedded Software Lab.,Sungkyunkwan University
+
+성균관대학교 정보통신대학 IT융합학과 박사과정
+
+Email) oso0931@gmail.com
+
+-------------------------------------------------

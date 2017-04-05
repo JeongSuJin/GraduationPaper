@@ -1,0 +1,125 @@
+[제안-0327]
+
+참고 : file_defrag 내에서 get_file_extents를 부를때 파일의 모든 fragment를 가져온다.
+논문아이디어: 애초에 get_file_extents()가 크기 k 미만의 file extent만 가져오도록 하는 것
+
+	  * 고려할 것1: file_defrag 수행 후 해당 파일의 모든 extent가 한 곳에 모여있다고 파일시스템이 인식했었다면 그것 또한 고쳐야 한다.
+	  * 고려할 것2: file extents들의 change_physical_to_logical 이후가 다음과 같다고 해보자. 
+			ext1(200 blks) - ext2(12 blks) - ext3(150 blks) - ext4(25 blks) - ext5(350 blks) - ext6(22 blks) - ext7(240 blks) - ext8(45 blks) 
+			이 경우(논리주소로 정렬했을 때 크기가 큰 ext 사이사이에 크기가 작은 ext들이 껴있다면) 
+			아이디어를 적용한 defrag 후의 성능향상이 매우 미미할 수 있다.
+			
+			defrag 후에 파일을 read하려고 할때
+			파일블럭을 sequential read(read 순서 ext1->ext2->ext3->... )해야되는 파일 시스템 입장에서
+			ext2,4,6,8만 연속으로 저장되어 있기 때문에 sequantial read를 하려면 계속 왔다갔다 해야 되기 때문이다.
+	
+//////////////////////////////////////////////////////////////////////////////
+[윤지언니 피드백-0329]
+
+고려할 것1 피드백: 신경안써도 됨. 
+고려할 것2 피드백: defrag시 read 성능이 얼마나 좋아지는지 다음을 추출하여 비교하기
+				(1)large extent 읽는 속도 (2)small extent 읽는 속도 (3) large+small extent 읽는 속도
+
+				일단 e4defrag.c 단독 컴파일 해보기.
+				윤지언니는 header가 안보여서 structure 필요한거 만들어서 처리햇음
+				arm cross compile로 e4defrag 안드로이드용 목적파일 만들어 낼 수 있는지 알아야됨.
+				- 루팅 안한 폰에서는 물론 안되겠지만
+				
+//////////////////////////////////////////////////////////////////////////////
+[피드백 관련 금토일에 해야할 것]
+
+1. e4defrag.c 단독 컴파일
+	- arm cross compile로 안드로이드 목적파일 만들어 내는 방법 알아내기
+
+2. 버전A.1 코딩 & 컴파일 
+	- defrag하는 도중 defrag에 참여한 모든 extent가 논리주소로 정렬된 상태일때
+      정렬순서대로 각 extent의 크기 프린트하도록 원본파일 수정
+	- [제안 - 고려할 것2]에서 걱정하는 상황이 실제로 있는지 확인하기 위함이다.
+
+3. 버전A.2 코딩 & 컴파일 
+	- 지정크기 k 이하의 extent만 defrag에 참여하도록 원본파일 수정(버전A.1 복사본에다가 만들기. 버전A.1을 수정하면 안된다)
+
+4. defrag 하기 전으로 파일저장상태를 돌릴 수 있는 방법 알기
+	- 'dd' 파일시스템 복사 명령어.
+
+5. 특정 파일의 extent 크기 별 파일시스템read 속도를 어떻게 알아낼지 구글링
+	- [고려할 것2 피드백]에서 말한 read 성능 비교를 하기 위함이다.
+	- fio: io 사이즈에 따른 read 성능을 잴 수 있음
+	
+//////////////////////////////////////////////////////////////////////////////
+[피드백 진행-1]
+
+크로스 컴파일러 arm-linux-gnueabi-gcc 설치 완료
+
+e4defrag.c 단독 컴파일을 위해 makefile보는 중...
+- makefile에서 e4defrag.c랑 링크되어있는것만 뽑아내서 간이 makefile을 만들어서 쓰면 제일 좋음
+- 위 방법이 안될거 같으면 걍 e4defrag.c 자체에 모든 헤더 포함시켜야 되는데... 음
+- 하다가 포기했음. 그냥 아래의 방법을 쓰기로 한다
+
+[방법]
+	./configure --prefix=/usr --with-root-prefix= --enable-elf-shlibs
+	make
+	
+	여기까지만 하고 misc 디렉토리 안에 있는 e4defrag 실행파일을 바로 사용하기로 하자.
+	커널에 올릴필요 없다. 시간오래걸림 gcc는 arm-linux-gnueabi-gcc를 사용하도록 변경해야 됨.
+
+[피드백 진행-2]
+
+- [e4defrag -c filename]은 defrag를 진행하지 않고 파일의 frag개수를 보여주는 함수이다.
+- 옵션 c일때 대상파일에 대해 실행되는 함수는 file_statistic이다. 
+
+- 버전A.1 를 위해 file_statistic을 수정해야지... 라고 생각했는데 이미 구현되어 있더라.
+
+	file_statistic 내부 - single file fragmentation이고 옵션 cv 일때:
+	/* File only */
+         if (mode_flag & DETAIL) {
+             int count = 0;
+             struct fiemap_extent_list *ext_list_tmp =
+                         logical_list_head;
+ 
+             /* Print extents info */
+             do {
+                 count++;
+                 printf("[ext %d]:\tstart %llu:\tlogical "./
+                         "%llu:\tlen %llu\n", count,
+                         ext_list_tmp->data.physical,
+                         ext_list_tmp->data.logical,
+                         ext_list_tmp->data.len);
+                 ext_list_tmp = ext_list_tmp->next;
+             } while (ext_list_tmp != logical_list_head);
+ 
+         }
+
+- 옵션 c 하나만 설정해도 위의 코드가 실행되도록 수정하였다.(단 relevant file fragmentation : dir 일때는 안됨)
+
+[피드백 진행-3]
+
+지정크기 k 이하의 extent만 defrag에 참여하도록 원본파일 수정
+
+- get_file_extents를 수정하여 지정블럭개수 k(limit)이하의 extent만 가져오도록 수정했다 (ver_A.2 완료)
+  일단 k는 수동설정해야 되는데, get_file_extents()의 arg로 k를 넘겨줄수 있으려면 
+	get_file_extents 함수를 인자로 받는 다른 함수가 e2fsprogs-1.43.4내에 있는지 봐야 한다.
+
+- grep으로 확인해 본 결과 get_file_extents는 e4defrag.c 내에서만 쓰인다.
+	e4defrag.c내에서도 get_file_extents함수 자체를 인자로 받는 함수는 없으므로 get_file_extents의 arg로 k를 추가해도 된다.
+
+- get_file_extents가 arg로 k(blk_limit)을 받도록 수정&컴파일 완료. get_file_extents 를 사용하는 line은 다 수정해 주었다.
+
+///////////////////////////////////////////////////////////////////////////////////
+[월욜에 받은 피드백 정리-0405]
+0409까지 완료해야 함
+
+1. make유틸리티 사용시 옵션을 주거나 makefile을 수정하여 arm-linux-gnueabi-gcc가 사용되도록 해야 한다.
+
+2. 'File Systems Fated for Senescence? Nonsense, Says Science!' 논문 보기
+	- Fragment 실험 따라하기 (어떻게 실험했는지 정리)
+	
+3. defrag 하기 전으로 파일저장상태를 돌릴 수 있는 방법 알기
+	- 'dd' 파일시스템 복사 명령어로 파일 시스템 상태를 usb에 저장해 두던가 하고, 
+	  defrag 후 usb상태를 그대로 복붙시킬 수 있나 봐야 함
+
+4. 특정 파일의 파일시스템 read 속도를 어떻게 알아낼지
+	- [고려할 것2 피드백]에서 말한 read 성능 비교를 하기 위함이다.
+	- 'fio': io 사이즈에 따른 read 성능을 잴 수 있음
+
+

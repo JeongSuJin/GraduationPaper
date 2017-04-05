@@ -1,0 +1,29 @@
+#0
+e4defrag소스파일: https://fossies.org/dox/e2fsprogs-1.43.4/e4defrag_8c_source.html
+
+#1
+by 윤지언니:
+	e4defrag 도구 - 유저 프로그램. 빌드해서 사용할 것
+	vim, ctag 로 [https://fossies.org/dox/e2fsprogs-1.43.4/e4defrag_8c_source.html] 코드분석
+by 구글링: 
+	ctag 사용법 - http://bowbowbow.tistory.com/15
+	e4defrag 사용법 - http://www.hecticgeek.com/2012/10/defragment-ext4-file-systems-using-e4defrag-ubuntu/
+
+#2
+by 구글링:
+e4defrag.c 소스 수정후 적용되도록 하려면: http://www.linuxfromscratch.org/~bdubbs/lfs-museum/2.4.1/LFS-BOOK-INTEL-2.4.1-HTML/ch06-e2fsprogs.html
+- e4defrag.c가 E2fsprogs(라이브러리?) 내의 한 소스파일이다. 소스파일 수정 후 E2fsprogs 전체를 컴파일 해서 올린다.
+- 컴파일&올리기 명령어:		
+	./configure --prefix=/usr --with-root-prefix= --enable-elf-shlibs
+	make
+	sudo make install
+	sudo make install-libs
+
+################################################ 환경구축 완료 ###########################################################################
+		
+#3
+	./configure --prefix=/usr --with-root-prefix= --enable-elf-shlibs
+	make
+	
+	여기까지만 하고 misc 내의 e4defrag 실행파일을 바로 사용하기로 하자.
+	커널에 올릴필요 없다. 시간오래걸림
